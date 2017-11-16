@@ -2,35 +2,33 @@ module LambdaLexer where
     import System.IO
     import Control.Monad
     import Text.ParserCombinators.Parsec
-    import Text.ParserCombinators.Parsec.Expr
-    import Text.ParserCombinators.Parsec.Language
-    import qualified Text.ParserCombinators.Parsec.Token as Token
+    import Text.Parsec.Char
+    -- import Text.ParserCombinators.ReadP
 
-    -- data BExpr = BoolConst Bool
-    --             | Not BExpr
-    --             | BBinary BBinOp BExpr BExpr
-    --             | RBinary RBinOp AExpr AExpr
-    --             deriving (Show)
+    -- & ( x int y int ) x * ( & ( z int ) z * 3 ) 4
 
-    -- data BBinOp = And | Or deriving (Show)
+    -- lambda = many ( between (munch (string "& (")) (munch (string ")")) (many ( char ) ) )
 
-    -- data RBinOp = Greater | Less deriving (Show)
+    -- beginning = string 
 
-    languageDef =
-          emptyDef
-          { Token.commentStart   = "~*"
-          , Token.commentEnd     = "*~"
-          , Token.commentLine    = "~~"
-          , Token.nestedComments = True
-          , Token.identStart     = letter
-          , Token.identLetter    = alphaNum <|> oneOf "_"
-          , Token.opStart        = opLetter emptyDef
-          , Token.opLetter       = oneOf "!%&*+.<=>^|-"
-          , Token.reservedOpNames= []
-          , Token.reservedNames  = ["&", ":"]
-          , Token.caseSensitive  = True
-          }
+    lambda = many ( between (string "& (") (string ")") (many (noneOf "\n\r")) )
 
-    lexer = Token.makeTokenParser languageDef
+    -- parseLambda input = parse lambda "(unknown)" input
 
-          
+    -- programFile = endBy line eol
+    -- line = sepBy lambdaExpr (char '&')
+    -- lambdaExpr =  many (noneOf "\n\r")
+
+    -- eol =   try (string "\n\r")
+    --     <|> try (string "\r\n")
+    --     <|> string "\n"
+    --     <|> string "\r"
+    --     <?> "end of line"
+
+    -- parseLambda :: String -> [[String]]
+    -- parseLambda input = output
+    --     where   output = case flex of
+    --                         Left x -> [["Err"]]
+    --                         Right y -> y
+    --             flex = parse programFile "(unknown)" input
+    -- 
