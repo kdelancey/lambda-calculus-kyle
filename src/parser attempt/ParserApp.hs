@@ -3,6 +3,7 @@
 
 import Text.Regex.Applicative
 import Data.Char hiding (Space)
+import Data.String
 import Data.Maybe
 
 data LType
@@ -13,7 +14,7 @@ data LType
 
 data Token
     = Tok_Number Int
-    | Tok_Flt Float
+    | Tok_Flt String --Double
     | Tok_Str String
     | Tok_IntOpr Char
     | Tok_BlnOpr String
@@ -40,13 +41,14 @@ str = sym '"' *> many (psym isPrint) <* sym '"'
 -- Regular Expression matching any substring
 -- that has digits before and after a period,
 -- representing a float
-flt :: RE Char Float
-flt = sym '"' *> many (psym isPrint) <* sym '"'
+-- flt :: RE Char [Char]
+-- flt = many (psym isDigit) <* sym '.' *> many (psym isDigit)
+-- realToFrac To
 
 -- Map 'string' over all boolean operator symbols,
 -- then make a Left-Associated RE match with symbols
 blnOpr :: RE Char [Char]
-blnOpr = foldr1 (<|>) $ map string ["==", "<=", ">=", "!="]
+blnOpr = foldr1 (<|>) $ map string ["==", "<", ">"]
 
 -- Map 'sym' over all int operator symbols,
 -- then make a Left-Associated RE match with symbols
@@ -71,7 +73,8 @@ space = many $ psym isSpace
 
 -- Left-Associated Lexer
 token :: RE Char Token
-token = (Tok_Number <$> num)
+token = 
+     (Tok_Number <$> num)
      <|> (Tok_Str <$> str)
      <|> (Tok_IntOpr <$> intOpr)
      <|> (Tok_BlnOpr <$> blnOpr)
@@ -82,7 +85,10 @@ token = (Tok_Number <$> num)
      <|> (Tok_LParen <$ sym '(')
      <|> (Tok_RParen <$ sym ')')
 
+         --  (Tok_Flt <$> flt)
+    --  <|> 
+
 tokens :: RE Char [Token]
 tokens = catMaybes <$> many ((Just <$> token) <|> (Nothing <$ space))
 
-main = print $ "& a:Int b:Int -> \"a\" + b" =~ tokens
+main = print $ "& a:Int b:Int -> \"ayylma\" + b" =~ tokens
