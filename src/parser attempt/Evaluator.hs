@@ -1,38 +1,73 @@
 import Text.Regex.Applicative
+import Data.Char hiding (Space)
+import Data.String
+import Data.Maybe
 
-    data Name = String
-    data Type = Number | Float | Str deriving Show
-    data Variable = Name Type deriving Show
+type Name 
+    = String
+data Type 
+    = Number | Float | Str deriving (Enum, Show)
+data Variable 
+    = Variable Name Type deriving Show
 
-    data Function = Print Function
-                    | Print Variable
-                    | Add Variable Variable
-                    | Sub Variable Variable
-                    | Div Variable Variable
-                    | Mult Variable Variable
-                    | Greater Variable Variable
-                    | Less Variable Variable
-                    | Equal Variable Variable
+name :: RE Char Name
+name = (:) <$> psym isAlpha <*> many $ psym isAlphaNum    
 
-    data Lambda = [Variable] [Function]
+type' :: RE Char Type
+type' = Number <$ string ":Int" 
+        <|> Float  <$ string ":Flt"
+        <|> Str    <$ string ":Str"
 
-    varible :: RE Char String
+variable :: RE Char Variable
+variable = Variable <$> name <*> type'
 
-    varibles :: RE Char [Variable]
-    varibles = sym '&' *> many (psym isPrint) <* string "->"
+variables :: RE Char [Variable]
+variables = sym '&' *> many $ variable <* string "->"
 
-    lambda = Lambda <$> 
-    -- protocol :: RE Char Protocol
-    -- protocol = HTTP <$ string "http" <|> FTP <$ string "ftp"
+data Lambda 
+    = Lambda [Variable] [Expr]
 
-    -- type Host = String
-    -- type Location = String
-    -- data URL = URL Protocol Host Location deriving Show
+data Expr 
+        = Print     Expr
+        | Lamb      Lambda
+        | Var       Variable
+        | Add       Expr Expr
+        | Sub       Expr Expr
+        | Div       Expr Expr
+        | Mult      Expr Expr
+        | Greater   Expr Expr
+        | Less      Expr Expr
+        | Equal     Expr Expr
 
-    -- host :: RE Char Host
-    -- host = many $ psym $ (/= '/')
+expr :: RE Char Expr
+expr    =   Print     <$> expr
+        <|> Lamb      <$> lambda
+        <|> Var       <$> variable
+        <|> Add       <$> expr <*> expr
+        <|> Sub       <$> expr <*> expr
+        <|> Div       <$> expr <*> expr
+        <|> Mult      <$> expr <*> expr
+        <|> Greater   <$> expr <*> expr
+        <|> Less      <$> expr <*> expr
+        <|> Equal     <$> expr <*> expr
 
-    -- url :: RE Char URL
-    -- url = URL <$> protocol <* string "://" <*> host <* sym '/' <*> many anySym
+exprs :: RE Char [Expr]
+exprs = many $ expr
 
-    -- main = print $ "http://stackoverflow.com/questions" =~ url
+lambda :: RE Char Lambda
+lambda = Lambda <$> variables <*> exprs
+
+-- protocol :: RE Char Protocol
+-- protocol = HTTP <$ string "http" <|> FTP <$ string "ftp"
+
+-- type Host = String
+-- type Location = String
+-- data URL = URL Protocol Host Location deriving Show
+
+-- host :: RE Char Host
+-- host = many $ psym $ (/= '/')
+
+-- url :: RE Char URL
+-- url = URL <$> protocol <* string "://" <*> host <* sym '/' <*> many anySym
+
+-- main = print $ "http://stackoverflow.com/questions" =~ url
