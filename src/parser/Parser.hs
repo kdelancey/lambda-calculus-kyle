@@ -22,8 +22,8 @@ type' = Number     <$ (whitespace *> string ":" <* whitespace *> string "Int")
         <|> Float  <$ (whitespace *> string ":" <* whitespace *> string "Flt")
         <|> Str    <$ (whitespace *> string ":" <* whitespace *> string "Str")
 
-variable :: RE Char Variable
-variable = Variable <$> name <*> (X <$ whitespace)
+variable :: RE Char Expr
+variable = Var <$> (Variable <$> name <*> (X <$ whitespace))
 
 variableDec :: RE Char Variable
 variableDec = Variable <$> name <*> type'
@@ -48,16 +48,16 @@ data Expr
         deriving Show
 
 expr :: RE Char Expr
-expr    =   Print     <$> (string "print" *> expr)
-        <|> Var       <$> variable
+expr    =   Print     <$> (string "print" *> variable)
+        <|> Add       <$> variable <*> (sym '+' *> variable)
+        <|> Sub       <$> variable <*> (sym '-' *> variable)
+        <|> Div       <$> variable <*> (sym '/' *> variable)
+        <|> Mult      <$> variable <*> (sym '*' *> variable)
+        <|> Greater   <$> variable <*> (sym '>' *> variable)
+        <|> Less      <$> variable <*> (sym '<' *> variable)
+        <|> Equal     <$> variable <*> (sym '=' *> variable)
+        <|> variable
         <|> Lamb      <$> lambda
-        <|> Add       <$> expr <* sym '+' *> expr
-        <|> Sub       <$> expr <* sym '-' *> expr
-        <|> Div       <$> expr <* sym '/' *> expr
-        <|> Mult      <$> expr <* sym '*' *> expr
-        <|> Greater   <$> expr <* sym '>' *> expr
-        <|> Less      <$> expr <* sym '<' *> expr
-        <|> Equal     <$> expr <* sym '=' *> expr
 
 exprs :: RE Char [Expr]
 exprs = many expr
@@ -75,10 +75,12 @@ main = do
     print $ "nameOfAVariable:Int" =~ variableDec
     print "Variable Declarations:"
     print $ "& a   :   Int   b:Int -> " =~ variableDecs
+    print "Variable as Expr:"
+    print $ "a" =~ variable
     print "Expression:"
     print $ "a * b" =~ expr
     print "Single Lambda:"
-    print $ "& a   :   Int   b:Int -> a " =~ lambda
+    print $ "& a   :   Int   b:Int -> & a   :   Int   b:Int -> a * b | 3 2" =~ lambda
     print "Done Tests"
 
 -- protocol :: RE Char Protocol
