@@ -1,3 +1,5 @@
+module STParser where
+
 import Text.Regex.Applicative
 import Data.Char hiding (Space)
 import Data.String
@@ -6,10 +8,19 @@ import Data.Maybe
 type Name 
     = String
 data Type 
-    = Number | Float | Str | X deriving (Enum, Show)
+    = Number | Float | Str | Bol | X deriving (Enum, Show)
     -- X denotes unknown type. If unknown in variable declaration during evaluation, throw errors
 data Variable 
     = Variable Name Type deriving Show
+
+-- Variable Methods --
+getName :: Variable -> Name
+getName (Variable nm ty) = nm
+
+getType :: Variable -> Type
+getType (Variable nm ty) = ty
+
+-- Parser Methods --
 
 whitespace :: RE Char String
 whitespace = many(sym ' ')
@@ -21,6 +32,7 @@ type' :: RE Char Type
 type' = Number     <$ (whitespace *> string ":" <* whitespace *> string "Int")
         <|> Float  <$ (whitespace *> string ":" <* whitespace *> string "Flt")
         <|> Str    <$ (whitespace *> string ":" <* whitespace *> string "Str")
+        <|> Bol    <$ (whitespace *> string ":" <* whitespace *> string "Bol")
 
 variable :: RE Char Expr
 variable = Var <$> (Variable <$> name <*> (X <$ whitespace))
@@ -36,7 +48,7 @@ data Lambda
 
 data Expr 
         = Print     Expr
-        | Lamb      Lambda
+        | ILmbd     Lambda
         | Var       Variable
         | Add       Expr Expr
         | Sub       Expr Expr
@@ -57,7 +69,7 @@ expr    =   Print     <$> (string "print" *> variable)
         <|> Less      <$> variable <*> (sym '<' *> variable)
         <|> Equal     <$> variable <*> (sym '=' *> variable)
         <|> variable
-        <|> Lamb      <$> lambda
+        <|> ILmbd     <$> lambda
 
 exprs :: RE Char [Expr]
 exprs = many expr
@@ -65,35 +77,22 @@ exprs = many expr
 lambda :: RE Char Lambda
 lambda = Lambda <$> variableDecs <*> exprs
 
-main = do 
-    print "Testing different RegExp:"
-    print "Name:"
+main = do
+    putStrLn "\nTesting different Steps of Parser:"
+    putStrLn "\nName:"
     print $ "nameOfAVariable" =~ name
-    print "Type:"
+    putStrLn "\nType:"
     print $ ":Int" =~ type'
-    print "Variable Declarations:"
+    putStrLn "\nVariable Declarations:"
     print $ "nameOfAVariable:Int" =~ variableDec
-    print "Variable Declarations:"
+    putStrLn "\nVariable Declarations:"
     print $ "& a   :   Int   b:Int -> " =~ variableDecs
-    print "Variable as Expr:"
+    putStrLn "\nVariable as Expr:"
     print $ "a" =~ variable
-    print "Expression:"
+    putStrLn "\nExpression:"
     print $ "a * b" =~ expr
-    print "Single Lambda:"
-    print $ "& a   :   Int   b:Int -> & a   :   Int   b:Int -> a * b | 3 2" =~ lambda
-    print "Done Tests"
-
--- protocol :: RE Char Protocol
--- protocol = HTTP <$ string "http" <|> FTP <$ string "ftp"
-
--- type Host = String
--- type Location = String
--- data URL = URL Protocol Host Location deriving Show
-
--- host :: RE Char Host
--- host = many $ psym $ (/= '/')
-
--- url :: RE Char URL
--- url = URL <$> protocol <* string "://" <*> host <* sym '/' <*> many anySym
-
--- main = print $ "http://stackoverflow.com/questions" =~ url
+    putStrLn "\nSingle Lambda:"
+    print $ "& a   :   Int   b:Int -> a * b" =~ lambda
+    putStrLn "\nNested Lambdas:"
+    print $ "& a:Int   b:Int -> & x:Int y:Int -> x + y a * b" =~ lambda
+    putStrLn "\nDone Tests"
