@@ -6,26 +6,33 @@ import Data.Maybe
 type Name 
     = String
 data Type 
-    = Number | Float | Str deriving (Enum, Show)
+    = Number | Float | Str | X deriving (Enum, Show)
+    -- X denotes unknown type. If unknown in variable declaration during evaluation, throw errors
 data Variable 
     = Variable Name Type deriving Show
 
+whitespace :: RE Char String
+whitespace = many(sym ' ')
+
 name :: RE Char Name
-name = (:) <$> psym isAlpha <*> many $ psym isAlphaNum    
+name = whitespace *> ((:) <$> psym isAlpha <*> many (psym isAlphaNum))    
 
 type' :: RE Char Type
-type' = Number <$ string ":Int" 
-        <|> Float  <$ string ":Flt"
-        <|> Str    <$ string ":Str"
+type' = Number     <$ (whitespace *> string ":" <* whitespace *> string "Int")
+        <|> Float  <$ (whitespace *> string ":" <* whitespace *> string "Flt")
+        <|> Str    <$ (whitespace *> string ":" <* whitespace *> string "Str")
 
 variable :: RE Char Variable
-variable = Variable <$> name <*> type'
+variable = Variable <$> name <*> (X <$ whitespace)
 
-variables :: RE Char [Variable]
-variables = sym '&' *> many $ variable <* string "->"
+variableDec :: RE Char Variable
+variableDec = Variable <$> name <*> type'
+
+variableDecs :: RE Char [Variable]
+variableDecs = sym '&' *> many variableDec <* (whitespace *> string "->" <* whitespace)
 
 data Lambda 
-    = Lambda [Variable] [Expr]
+    = Lambda [Variable] [Expr] deriving Show
 
 data Expr 
         = Print     Expr
@@ -38,24 +45,41 @@ data Expr
         | Greater   Expr Expr
         | Less      Expr Expr
         | Equal     Expr Expr
+        deriving Show
 
 expr :: RE Char Expr
-expr    =   Print     <$> expr
-        <|> Lamb      <$> lambda
+expr    =   Print     <$> (string "print" *> expr)
         <|> Var       <$> variable
-        <|> Add       <$> expr <*> expr
-        <|> Sub       <$> expr <*> expr
-        <|> Div       <$> expr <*> expr
-        <|> Mult      <$> expr <*> expr
-        <|> Greater   <$> expr <*> expr
-        <|> Less      <$> expr <*> expr
-        <|> Equal     <$> expr <*> expr
+        <|> Lamb      <$> lambda
+        <|> Add       <$> expr <* sym '+' *> expr
+        <|> Sub       <$> expr <* sym '-' *> expr
+        <|> Div       <$> expr <* sym '/' *> expr
+        <|> Mult      <$> expr <* sym '*' *> expr
+        <|> Greater   <$> expr <* sym '>' *> expr
+        <|> Less      <$> expr <* sym '<' *> expr
+        <|> Equal     <$> expr <* sym '=' *> expr
 
 exprs :: RE Char [Expr]
-exprs = many $ expr
+exprs = many expr
 
 lambda :: RE Char Lambda
-lambda = Lambda <$> variables <*> exprs
+lambda = Lambda <$> variableDecs <*> exprs
+
+main = do 
+    print "Testing different RegExp:"
+    print "Name:"
+    print $ "nameOfAVariable" =~ name
+    print "Type:"
+    print $ ":Int" =~ type'
+    print "Variable Declarations:"
+    print $ "nameOfAVariable:Int" =~ variableDec
+    print "Variable Declarations:"
+    print $ "& a   :   Int   b:Int -> " =~ variableDecs
+    print "Expression:"
+    print $ "a * b" =~ expr
+    print "Single Lambda:"
+    print $ "& a   :   Int   b:Int -> a " =~ lambda
+    print "Done Tests"
 
 -- protocol :: RE Char Protocol
 -- protocol = HTTP <$ string "http" <|> FTP <$ string "ftp"
